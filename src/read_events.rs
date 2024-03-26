@@ -7,8 +7,8 @@ use robotics_lib::world::tile::{Content, Tile, TileType};
 use robotics_lib::world::world_generator::Generator;
 use worldgen_unwrap::public::WorldgeneratorUnwrap;
 use crate::player_gen::{Player2d, Player3d};
-use crate::frame_gen::{BackpackFrame, EnergyTotFrame, EnergyAddFrame, EnergyRemFrame, WeatherTimeFrame, MessageFrame, MapFrame};
-use crate::world_gen::{ContentBlock, TileBlock};
+use crate::frame_gen::{BackpackFrame, EnergyTotFrame, EnergyAddFrame, EnergyRemFrame, WeatherFrame, TimeFrame, MessageFrame, MapFrame};
+use crate::world_gen::{ContentBlock, Light, TileBlock};
 use crate::{FRAME_SIZE, MAP_SIZE, SQUARE_FRAME_PATH, WORLD_PATH};
 
 pub struct ReadEventPlugin;
@@ -16,51 +16,44 @@ pub struct ReadEventPlugin;
 impl Plugin for ReadEventPlugin{
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(ExternEventsPlugin::<ReadEventType>::default())
-            .add_systems(Update, event_system);
+            .add_plugins(ExternEventsPlugin::<ReadRobotEventType>::default())
+            .add_systems(Update, robot_event_system)
+            .add_plugins(ExternEventsPlugin::<ReadWorldEventType>::default())
+            .add_systems(Update, world_event_system);
     }
 }
 
 //Enum containing all the events I need to manage the GUI updates
 #[derive(Default, PartialEq, Debug)]
-pub enum ReadEventType{
+pub enum ReadRobotEventType{
     RobotMoved((usize, usize)),
-    TimeChanged(EnvironmentalConditions),
     EnergyRecharged((usize,usize)),
     EnergyConsumed(usize),
-    UpdatedTile((Tile,(usize,usize))),
     AddBackpack(Vec<Content>),
     RemoveBackpack(Vec<Content>),
     MessageLogMoved((usize,usize)),
     MessageLogAddedToBackpack((Content, usize)),
     MessageLogRemovedFromBackpack((Content, usize)),
-    LittleMapUpdate(Vec<Vec<Option<Tile>>>),
     #[default]
     None,
 }
 
-pub fn event_system(
+pub fn robot_event_system(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     assets: Res<AssetServer>,
-    mut native_events: EventReader<ExternEvent<ReadEventType>>,
-
+    mut native_events: EventReader<ExternEvent<ReadRobotEventType>>,
     mut query_player_3d: Query<(&mut Transform, With<Player3d>)>,
     mut query_player_2d: Query<(Entity, With<Player2d>)>,
-    mut query_tiles_block: Query<(&mut Transform, Entity, With<TileBlock>, Without<Player3d>, Without<ContentBlock>)>,
-    mut query_content_tile: Query<(&mut Transform, Entity, With<ContentBlock>, Without<Player3d>, Without<TileBlock>)>,
-    mut query_weather_frame: Query<(Entity, With<WeatherTimeFrame>)>,
     mut query_energy_text_tot: Query<(Entity, With<EnergyTotFrame>)>,
     mut query_energy_text_rem: Query<(Entity, With<EnergyAddFrame>)>,
     mut query_energy_text_add: Query<(Entity, With<EnergyRemFrame>)>,
     mut query_backpack_frames: Query<(Entity, With<BackpackFrame>)>,
     mut query_message_frame: Query<(Entity, With<MessageFrame>)>,
-    mut query_map_frame: Query<(Entity, With<MapFrame>)>
-){
-    for e in native_events.read(){
-        match &e.0 {
-            ReadEventType::RobotMoved(new_position) => {
+)
+{
+    for extern_event in native_events.read(){
+        match &extern_event.0 {
+            ReadRobotEventType::RobotMoved(new_position) => {
                 let world = WorldgeneratorUnwrap::init(false, Some(PathBuf::from(WORLD_PATH))).gen();
                 let world_size = world.0.len();
                 let world_blocks = world.clone().0;
@@ -97,109 +90,7 @@ pub fn event_system(
                 commands.spawn(player_2d);
             }
 
-            ReadEventType::TimeChanged(new_condition) => {
-
-                //I de-spawn both the time and weather frames
-                for (weather_frame, _object) in query_weather_frame.iter_mut() {
-                    commands.entity(weather_frame).despawn();
-                }
-
-                //I look for the new weather condition and I spawn the new weather frame
-                let new_weather_condition = new_condition.get_weather_condition();
-                let weather_texture = match new_weather_condition {
-                    WeatherType::Sunny => assets.load("time_weather_texture/sunny.png"),
-                    WeatherType::Rainy => assets.load("time_weather_texture/rain.png"),
-                    WeatherType::Foggy => assets.load("time_weather_texture/fog.png"),
-                    WeatherType::TropicalMonsoon => assets.load("time_weather_texture/monsoon.png"),
-                    WeatherType::TrentinoSnow => assets.load("time_weather_texture/snow.png")
-                };
-
-                commands.spawn((ImageBundle{
-                    style: Style{
-                        position_type: PositionType::Relative,
-                        align_self: AlignSelf::Start,
-                        justify_self: JustifySelf::End,
-                        justify_content: JustifyContent::Center,
-                        align_content: AlignContent::Center,
-                        justify_items: JustifyItems::Center,
-                        align_items: AlignItems::Center,
-                        height: Val::Vw(FRAME_SIZE),
-                        width: Val::Vw(FRAME_SIZE),
-                        ..default()
-                    },
-                    image: UiImage{
-                        texture: assets.load(SQUARE_FRAME_PATH),
-                        ..default()
-                    },
-                    ..default()
-                }, WeatherTimeFrame, Name::new("Weather_Frame"))).with_children(|parent| {
-                    parent.spawn((ImageBundle {
-                        style: Style {
-                            position_type: PositionType::Relative,
-                            align_self: AlignSelf::Center,
-                            justify_self: JustifySelf::Center,
-                            height: Val::Vw(4.0),
-                            width: Val::Vw(4.0),
-                            ..default()
-                        },
-                        image: UiImage {
-                            texture: weather_texture,
-                            ..default()
-                        },
-                        z_index: ZIndex::Global(1),
-                        ..default()
-                    }, Name::new("Weather_Texture")));
-                });
-
-                //I look for the new day time and I spawn the new time frame
-                let new_time_conditions = new_condition.get_time_of_day();
-                let texture_time = match new_time_conditions {
-                    DayTime::Morning => assets.load("time_weather_texture/morning.png"),
-                    DayTime::Afternoon => assets.load("time_weather_texture/evening.png"),
-                    DayTime::Night => assets.load("time_weather_texture/night.png")
-                };
-
-                commands.spawn((ImageBundle{
-                    style: Style{
-                        position_type: PositionType::Relative,
-                        align_self: AlignSelf::Start,
-                        justify_self: JustifySelf::End,
-                        justify_content: JustifyContent::Center,
-                        align_content: AlignContent::Center,
-                        justify_items: JustifyItems::Center,
-                        align_items: AlignItems::Center,
-                        right: Val::Vw(FRAME_SIZE),
-                        height: Val::Vw(FRAME_SIZE),
-                        width: Val::Vw(FRAME_SIZE),
-                        ..default()
-                    },
-                    image: UiImage{
-                        texture: assets.load(SQUARE_FRAME_PATH),
-                        ..default()
-                    },
-                    ..default()
-                }, WeatherTimeFrame, Name::new("Frame_time"))).with_children(|parent| {
-                    parent.spawn((ImageBundle {
-                        style: Style {
-                            position_type: PositionType::Relative,
-                            align_self: AlignSelf::Center,
-                            justify_self: JustifySelf::Center,
-                            height: Val::Vw(4.0),
-                            width: Val::Vw(4.0),
-                            ..default()
-                        },
-                        image: UiImage {
-                            texture: texture_time,
-                            ..default()
-                        },
-                        z_index: ZIndex::Global(1),
-                        ..default()
-                    }, Name::new("Time_Texture")));
-                });
-
-            }
-
-            ReadEventType::EnergyRecharged((energy_to_add, tot_energy)) => {
+            ReadRobotEventType::EnergyRecharged((energy_to_add, tot_energy)) => {
 
                 //In all the energy frame cases I only remove the children of the frames and re-spawn a different writing on it
                 for (energy_tot_frame, _object) in query_energy_text_tot.iter_mut() {
@@ -235,7 +126,7 @@ pub fn event_system(
                 }
             }
 
-            ReadEventType::EnergyConsumed(energy_to_remove) => {
+            ReadRobotEventType::EnergyConsumed(energy_to_remove) => {
                 for (energy_rem_frame, _object) in query_energy_text_add.iter_mut() {
                     commands.entity(energy_rem_frame).despawn_descendants();
                     commands.entity(energy_rem_frame).with_children(|parent| {
@@ -253,71 +144,7 @@ pub fn event_system(
                 }
             }
 
-            ReadEventType::UpdatedTile((tile_block, position)) => {
-
-                //Here I look for blocks that are turned into street in order to replace them in the 3d map
-                if tile_block.tile_type == TileType::Street{
-                    for tile_block in query_tiles_block.iter_mut(){
-                        if (tile_block.0.translation.z as usize, tile_block.0.translation.x as usize) == *position{
-                            commands.entity(tile_block.1).despawn();
-                            let tile_block = (
-                                PbrBundle {
-                                    mesh: meshes.add(Mesh::from(shape::Cube::new(1.0))),
-                                    material: materials.add(assets.load("tile_texture/road.png").clone().into()),
-                                    transform: Transform::from_xyz(tile_block.0.translation.x, tile_block.0.translation.y, tile_block.0.translation.z),
-                                    ..default()
-                                },
-                                TileBlock,
-                                Name::new("Tile_Block")
-                            );
-                            commands.spawn(tile_block);
-                        }
-                    }
-                }
-
-                //Here I de-spawn the block representing the content tile that correspond to the given position
-                for tile in query_content_tile.iter_mut(){
-                    if (tile.0.translation.z as usize, tile.0.translation.x as usize) == *position{
-                        commands.entity(tile.1).despawn();
-                    }
-                }
-
-                //If the content of the block is different from None then I spawn the right tile content in the given position,
-                // otherwise I do nothing since it means that the content of the tile was simply removed.
-                if tile_block.content != Content::None{
-                    let content_type = match tile_block.content {
-                        Content::Rock(_) => assets.load("contents/rock.png"),
-                        Content::Tree(_) => assets.load("contents/tree.png"),
-                        Content::Garbage(_) => assets.load("contents/garbage.png"),
-                        Content::Fire => assets.load("contents/fire.png"),
-                        Content::Coin(_) => assets.load("contents/coin.png"),
-                        Content::Bin(_) => assets.load("contents/bin.png"),
-                        Content::Crate(_) => assets.load("contents/crate.png"),
-                        Content::Bank(_) => assets.load("contents/bank.png"),
-                        Content::Water(_) => assets.load("contents/water.png"),
-                        Content::Market(_) => assets.load("contents/market.png"),
-                        Content::Fish(_) => assets.load("contents/fish.png"),
-                        Content::Building => assets.load("contents/building.png"),
-                        Content::Bush(_) => assets.load("contents/bush.png"),
-                        Content::JollyBlock(_) => assets.load("contents/star.png"),
-                        Content::Scarecrow => assets.load("contents/scarecrow.png"),
-                        Content::None => assets.load("contents/none.png")
-                    };
-                    let tile_content = (
-                        PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::Cube::new(0.3))),
-                            material: materials.add(content_type.clone().into()),
-                            transform: Transform::from_xyz(position.clone().1 as f32, tile_block.elevation as f32 + 0.36, position.clone().0 as f32),
-                            ..default()
-                        },
-                        ContentBlock,
-                        Name::new("Content_Block")
-                    );
-                    commands.spawn(tile_content);
-                }
-            }
-
-            ReadEventType::AddBackpack(vec_content_or) => {
+            ReadRobotEventType::AddBackpack(vec_content_or) => {
                 //I de-spawn all the backpack frames
                 for (backpack_frame_entity, _object) in query_backpack_frames.iter_mut(){
                     commands.entity(backpack_frame_entity).despawn_recursive();
@@ -363,9 +190,9 @@ pub fn event_system(
                                 align_content: AlignContent::Center,
                                 justify_items: JustifyItems::Center,
                                 align_items: AlignItems::Center,
-                                left: Val::Vw(i as f32 * 5.0),
-                                height: Val::Vw(5.0),
-                                width: Val::Vw(5.0),
+                                left: Val::Vw(i as f32 * FRAME_SIZE),
+                                height: Val::Vw(FRAME_SIZE),
+                                width: Val::Vw(FRAME_SIZE),
                                 ..default()
                             },
                             image: UiImage {
@@ -380,8 +207,8 @@ pub fn event_system(
                                 position_type: PositionType::Relative,
                                 align_self: AlignSelf::Center,
                                 justify_self: JustifySelf::Center,
-                                height: Val::Vw(4.0),
-                                width: Val::Vw(4.0),
+                                height: Val::Vw(FRAME_SIZE-1.0),
+                                width: Val::Vw(FRAME_SIZE-1.0),
                                 ..default()
                             },
                             image: UiImage {
@@ -395,7 +222,7 @@ pub fn event_system(
                 }
             }
 
-            ReadEventType::RemoveBackpack(vec_content_or) => {
+            ReadRobotEventType::RemoveBackpack(vec_content_or) => {
                 //Here I de-spawn all the backpack frame and with the same logic as the previous event I respawn them with the updated contents
                 for (backpack_frame_entity, _object) in query_backpack_frames.iter_mut(){
                     commands.entity(backpack_frame_entity).despawn_recursive();
@@ -470,7 +297,7 @@ pub fn event_system(
                 }
             }
 
-            ReadEventType::MessageLogMoved(position) => {
+            ReadRobotEventType::MessageLogMoved(position) => {
                 //Here I only de-spawn the children since I have no need to re-swan each time the frames
                 for (text_frame, _object) in query_message_frame.iter_mut() {
                     commands.entity(text_frame).despawn_descendants();
@@ -489,7 +316,7 @@ pub fn event_system(
                 }
             }
 
-            ReadEventType::MessageLogAddedToBackpack((content, quantity))=>{
+            ReadRobotEventType::MessageLogAddedToBackpack((content, quantity)) => {
                 //Here I only de-spawn the children since I have no need to re-swan each time the frames
                 for (text_frame, _object) in query_message_frame.iter_mut() {
                     commands.entity(text_frame).despawn_descendants();
@@ -508,7 +335,7 @@ pub fn event_system(
                 }
             }
 
-            ReadEventType::MessageLogRemovedFromBackpack((content, quantity))=>{
+            ReadRobotEventType::MessageLogRemovedFromBackpack((content, quantity)) => {
                 //Here I only de-spawn the children since I have no need to re-swan each time the frames
                 for (text_frame, _object) in query_message_frame.iter_mut() {
                     commands.entity(text_frame).despawn_descendants();
@@ -527,7 +354,210 @@ pub fn event_system(
                 }
             }
 
-            ReadEventType::LittleMapUpdate(world) => {
+            ReadRobotEventType::None => {}
+        }
+    }
+}
+
+
+
+#[derive(Default, PartialEq, Debug)]
+pub enum ReadWorldEventType{
+    TimeChanged(EnvironmentalConditions),
+    WeatherChanged(EnvironmentalConditions),
+    UpdatedTile((Tile,(usize,usize))),
+    LittleMapUpdate(Vec<Vec<Option<Tile>>>),
+    #[default]
+    None,
+}
+
+pub fn world_event_system(
+    mut commands: Commands,
+    assets: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut world_native_events: EventReader<ExternEvent<ReadWorldEventType>>,
+
+    mut query_tiles_block: Query<(&mut Transform, Entity, With<TileBlock>, Without<ContentBlock>)>,
+    mut query_content_tile: Query<(&mut Transform, Entity, With<ContentBlock>, Without<TileBlock>)>,
+    mut query_light: Query<(Entity, With<Light>)>,
+    mut query_time_frame: Query<(Entity, With<TimeFrame>)>,
+    mut query_weather_frame: Query<(Entity, With<WeatherFrame>)>,
+    mut query_map_frame: Query<(Entity, With<MapFrame>)>
+)
+{
+    for world_extern_event in world_native_events.read(){
+        match &world_extern_event.0{
+
+            ReadWorldEventType::WeatherChanged(new_condition) => {
+
+                //I look for the new weather condition and I spawn the new weather frame
+                let new_weather_condition = new_condition.get_weather_condition();
+                let weather_texture = match new_weather_condition {
+                    WeatherType::Sunny => assets.load("time_weather_texture/sunny.png"),
+                    WeatherType::Rainy => assets.load("time_weather_texture/rain.png"),
+                    WeatherType::Foggy => assets.load("time_weather_texture/fog.png"),
+                    WeatherType::TropicalMonsoon => assets.load("time_weather_texture/monsoon.png"),
+                    WeatherType::TrentinoSnow => assets.load("time_weather_texture/snow.png")
+                };
+
+                for (weather_frame, _object) in query_weather_frame.iter_mut() {
+                    commands.entity(weather_frame).despawn_descendants();
+                    commands.entity(weather_frame).with_children(|parent| {
+                        parent.spawn((ImageBundle {
+                            style: Style {
+                                position_type: PositionType::Relative,
+                                align_self: AlignSelf::Center,
+                                justify_self: JustifySelf::Center,
+                                height: Val::Vw(FRAME_SIZE - 1.0),
+                                width: Val::Vw(FRAME_SIZE - 1.0),
+                                ..default()
+                            },
+                            image: UiImage {
+                                texture: weather_texture.clone(),
+                                ..default()
+                            },
+                            z_index: ZIndex::Global(1),
+                            ..default()
+                        }, Name::new("Weather_Texture")));
+                    });
+
+                }
+            }
+
+            ReadWorldEventType::TimeChanged(new_condition) => {
+
+                //I look for the new day time
+                let new_time_conditions = new_condition.get_time_of_day();
+                let texture_time = match new_time_conditions {
+                    DayTime::Morning => assets.load("time_weather_texture/morning.png"),
+                    DayTime::Afternoon => assets.load("time_weather_texture/evening.png"),
+                    DayTime::Night => assets.load("time_weather_texture/night.png")
+                };
+
+                //I de-spawn the old image and I spawn the new one
+                for (time_frame, _object) in query_time_frame.iter_mut() {
+                    commands.entity(time_frame).despawn_descendants();
+                    commands.entity(time_frame).with_children(|parent| {
+                        parent.spawn((ImageBundle {
+                            style: Style {
+                                position_type: PositionType::Relative,
+                                align_self: AlignSelf::Center,
+                                justify_self: JustifySelf::Center,
+                                height: Val::Vw(FRAME_SIZE - 1.0),
+                                width: Val::Vw(FRAME_SIZE - 1.0),
+                                ..default()
+                            },
+                            image: UiImage {
+                                texture: texture_time.clone(),
+                                ..default()
+                            },
+                            z_index: ZIndex::Global(1),
+                            ..default()
+                        }, Name::new("Time_Texture")));
+                    });
+                }
+
+                for (light, _object) in query_light.iter_mut(){
+                    commands.entity(light).despawn();
+                }
+
+                let position = WorldgeneratorUnwrap::init(false, Some(PathBuf::from(WORLD_PATH))).gen().0.len() as f32 /2.0;
+                let light_position = match new_time_conditions {
+                    DayTime::Morning => (position , 100.0, position),
+                    DayTime::Afternoon => (position , 100.0, position),
+                    DayTime::Night => (position , 100.0, position)
+                };
+                let light_color = match new_time_conditions {
+                    DayTime::Morning => Color::rgb(1.0, 1.0, 1.0),
+                    DayTime::Afternoon => Color::rgb(1.0,  0.6, 0.4),
+                    DayTime::Night => Color::rgb(0.3,  0.3,  0.6)
+                };
+
+                let light = (
+                    PointLightBundle{
+                        point_light: PointLight{
+                            intensity: 300000.0,
+                            shadows_enabled: true,
+                            range: 1000.0,
+                            radius: 100.0,
+                            color: light_color,
+                            ..default()
+                        },
+                        transform: Transform::from_xyz(light_position.0, light_position.1, light_position.2),
+                        ..default()
+                    },
+                    Light,
+                    Name::new("Light")
+                );
+                commands.spawn(light);
+            }
+
+            ReadWorldEventType::UpdatedTile((tile_block, position)) => {
+
+                //Here I look for blocks that are turned into street in order to replace them in the 3d map
+                if tile_block.tile_type == TileType::Street{
+                    for tile_block in query_tiles_block.iter_mut(){
+                        if (tile_block.0.translation.z as usize, tile_block.0.translation.x as usize) == *position{
+                            commands.entity(tile_block.1).despawn();
+                            let tile_block = (
+                                PbrBundle {
+                                    mesh: meshes.add(Mesh::from(shape::Cube::new(1.0))),
+                                    material: materials.add(assets.load("tile_texture/road.png").clone().into()),
+                                    transform: Transform::from_xyz(tile_block.0.translation.x, tile_block.0.translation.y, tile_block.0.translation.z),
+                                    ..default()
+                                },
+                                TileBlock,
+                                Name::new("Tile_Block")
+                            );
+                            commands.spawn(tile_block);
+                        }
+                    }
+                }
+
+                //Here I de-spawn the block representing the content tile that correspond to the given position
+                for tile in query_content_tile.iter_mut(){
+                    if (tile.0.translation.z as usize, tile.0.translation.x as usize) == *position{
+                        commands.entity(tile.1).despawn();
+                    }
+                }
+
+                //If the content of the block is different from None then I spawn the right tile content in the given position,
+                // otherwise I do nothing since it means that the content of the tile was simply removed.
+                if tile_block.content != Content::None{
+                    let content_type = match tile_block.content {
+                        Content::Rock(_) => assets.load("contents/rock.png"),
+                        Content::Tree(_) => assets.load("contents/tree.png"),
+                        Content::Garbage(_) => assets.load("contents/garbage.png"),
+                        Content::Fire => assets.load("contents/fire.png"),
+                        Content::Coin(_) => assets.load("contents/coin.png"),
+                        Content::Bin(_) => assets.load("contents/bin.png"),
+                        Content::Crate(_) => assets.load("contents/crate.png"),
+                        Content::Bank(_) => assets.load("contents/bank.png"),
+                        Content::Water(_) => assets.load("contents/water.png"),
+                        Content::Market(_) => assets.load("contents/market.png"),
+                        Content::Fish(_) => assets.load("contents/fish.png"),
+                        Content::Building => assets.load("contents/building.png"),
+                        Content::Bush(_) => assets.load("contents/bush.png"),
+                        Content::JollyBlock(_) => assets.load("contents/star.png"),
+                        Content::Scarecrow => assets.load("contents/scarecrow.png"),
+                        Content::None => assets.load("contents/none.png")
+                    };
+                    let tile_content = (
+                        PbrBundle {
+                            mesh: meshes.add(Mesh::from(shape::Cube::new(0.3))),
+                            material: materials.add(content_type.clone().into()),
+                            transform: Transform::from_xyz(position.clone().1 as f32, tile_block.elevation as f32 + 0.36, position.clone().0 as f32),
+                            ..default()
+                        },
+                        ContentBlock,
+                        Name::new("Content_Block")
+                    );
+                    commands.spawn(tile_content);
+                }
+            }
+
+            ReadWorldEventType::LittleMapUpdate(world) => {
                 //Here I de-spawn all the frames of the little map
                 for (map_frame, _object1) in query_map_frame.iter_mut(){
                     commands.entity(map_frame).despawn();
@@ -560,7 +590,7 @@ pub fn event_system(
                             Some(tile) => {
                                 let tile_type = match tile.tile_type {
                                     TileType::DeepWater => assets.load("tile_texture/deepwater.png"),
-                                    TileType::ShallowWater => assets.load("tile_texture/shallowater.png"),
+                                    TileType::ShallowWater => assets.load("tile_texture/shallow_water.png"),
                                     TileType::Sand => assets.load("tile_texture/sand.png"),
                                     TileType::Grass => assets.load("tile_texture/grass.png"),
                                     TileType::Street => assets.load("tile_texture/road.png"),
@@ -595,7 +625,7 @@ pub fn event_system(
                 }
             }
 
-            ReadEventType::None => {}
+            ReadWorldEventType::None => {}
         }
     }
 }

@@ -10,7 +10,7 @@ use robotics_lib::runner::{Robot, Runnable};
 use robotics_lib::runner::backpack::BackPack;
 use robotics_lib::world::coordinates::Coordinate;
 use robotics_lib::world::tile::Content::Rock;
-use crate::read_events::ReadEventType;
+use crate::read_events::{ReadRobotEventType, ReadWorldEventType};
 use crate::TICK_DURATION;
 
 #[derive(Component)]
@@ -23,7 +23,7 @@ impl Runnable for MyRobot {
         let _ = go(self, world, choose_random_direction());
 
         //I use this event in order to being able to update the little map with the robot view
-        queue_event(ReadEventType::LittleMapUpdate(robot_map(world).unwrap()));
+        queue_event(ReadWorldEventType::LittleMapUpdate(robot_map(world).unwrap()));
 
         //I put a little delay (much smaller then the tick-period) in order do avoid concurrency in the commands;
         // this should not be necessary when using a tool since we should have a command per game tick.
@@ -38,28 +38,38 @@ impl Runnable for MyRobot {
             Event::Ready => {
                 println!("We are super ready");
             }
+
             Event::Terminated => {
                 println!("We are done");
             }
+
             Event::TimeChanged(new_conditions) => {
-                queue_event(ReadEventType::TimeChanged(new_conditions));
+                queue_event(ReadWorldEventType::TimeChanged(new_conditions.clone()));
+                queue_event(ReadWorldEventType::WeatherChanged(new_conditions));
             }
+
             Event::DayChanged(new_conditions) => {
-                queue_event(ReadEventType::TimeChanged(new_conditions));
+                queue_event(ReadWorldEventType::TimeChanged(new_conditions.clone()));
+                queue_event(ReadWorldEventType::WeatherChanged(new_conditions));
             }
+
             Event::EnergyRecharged(energy_recharged) => {
-                queue_event(ReadEventType::EnergyRecharged((energy_recharged, self.get_energy().get_energy_level())));
+                queue_event(ReadRobotEventType::EnergyRecharged((energy_recharged, self.get_energy().get_energy_level())));
             }
+
             Event::EnergyConsumed(energy_consumed) => {
-                queue_event(ReadEventType::EnergyConsumed(energy_consumed));
+                queue_event(ReadRobotEventType::EnergyConsumed(energy_consumed));
             }
+
             Event::Moved(_tile, position) => {
-                queue_event(ReadEventType::RobotMoved((position.0,position.1)));
-                queue_event(ReadEventType::MessageLogMoved(position));
+                queue_event(ReadRobotEventType::RobotMoved((position.0,position.1)));
+                queue_event(ReadRobotEventType::MessageLogMoved(position));
             }
+
             Event::TileContentUpdated(tile, position) => {
-                queue_event(ReadEventType::UpdatedTile((tile, (position.0, position.1))));
+                queue_event(ReadWorldEventType::UpdatedTile((tile, (position.0, position.1))));
             }
+
             Event::AddedToBackpack(content, quantity) => {
                 //In this case a create a Vec containing the contents of the backpack, that I will pass in a event
                 let mut vec_content = vec![];
@@ -70,9 +80,9 @@ impl Runnable for MyRobot {
                         }
                     }
                 }
-                queue_event(ReadEventType::AddBackpack(vec_content));
+                queue_event(ReadRobotEventType::AddBackpack(vec_content));
                 if quantity != 0 {
-                queue_event(ReadEventType::MessageLogAddedToBackpack((content, quantity)));
+                queue_event(ReadRobotEventType::MessageLogAddedToBackpack((content, quantity)));
                 }
             }
 
@@ -86,8 +96,8 @@ impl Runnable for MyRobot {
                         }
                     }
                 }
-                queue_event(ReadEventType::RemoveBackpack(vec_content));
-                queue_event(ReadEventType::MessageLogRemovedFromBackpack((content, quantity)));
+                queue_event(ReadRobotEventType::RemoveBackpack(vec_content));
+                queue_event(ReadRobotEventType::MessageLogRemovedFromBackpack((content, quantity)));
             }
         }
     }

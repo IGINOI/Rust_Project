@@ -6,7 +6,8 @@ pub struct SpawnFramePlugin;
 impl Plugin for SpawnFramePlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(Startup, spawn_weather_time_frame)
+            .add_systems(Startup, spawn_weather_frame)
+            .add_systems(Startup, spawn_time_frame)
             .add_systems(Startup, spawn_energy_frame)
             .add_systems(Startup, spawn_message_frame)
             .add_systems(Startup, spawn_backpack_frame)
@@ -20,7 +21,9 @@ impl Plugin for SpawnFramePlugin {
 pub struct BackpackFrame;
 
 #[derive(Component)]
-pub struct WeatherTimeFrame;
+pub struct TimeFrame;
+#[derive(Component)]
+pub struct WeatherFrame;
 
 #[derive(Component)]
 pub struct EnergyFrame;
@@ -68,13 +71,13 @@ fn spawn_backpack_frame(
     }
 }
 
-fn spawn_weather_time_frame(
+fn spawn_weather_frame(
     mut commands: Commands,
     assets: Res<AssetServer>
 )
 {
-    let weather_frame = (ImageBundle{
-        style: Style{
+    let weather_frame = (ImageBundle {
+        style: Style {
             position_type: PositionType::Relative,
             align_self: AlignSelf::Start,
             justify_self: JustifySelf::End,
@@ -86,14 +89,20 @@ fn spawn_weather_time_frame(
             width: Val::Vw(FRAME_SIZE),
             ..default()
         },
-        image: UiImage{
+        image: UiImage {
             texture: assets.load(SQUARE_FRAME_PATH),
             ..default()
         },
         ..default()
-    }, WeatherTimeFrame, Name::new("Weather_Frame"));
+    }, WeatherFrame, Name::new("Weather_Frame"));
     commands.spawn(weather_frame);
+}
 
+fn spawn_time_frame(
+    mut commands: Commands,
+    assets: Res<AssetServer>
+)
+{
     let time_frame = (ImageBundle{
         style: Style{
             position_type: PositionType::Relative,
@@ -113,7 +122,7 @@ fn spawn_weather_time_frame(
             ..default()
         },
         ..default()
-    }, WeatherTimeFrame, Name::new("Time_Frame"));
+    }, TimeFrame, Name::new("Time_Frame"));
     commands.spawn(time_frame);
 }
 

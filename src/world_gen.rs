@@ -15,6 +15,8 @@ impl Plugin for WorldPlugin{
 }
 
 #[derive(Component)]
+pub struct Light;
+#[derive(Component)]
 pub struct TileBlock;
 #[derive(Component)]
 pub struct ContentBlock;
@@ -32,11 +34,13 @@ fn spawn_light(
                 shadows_enabled: true,
                 range: 1000.0,
                 radius: 100.0,
+                color: Color::rgb(0.4, 0.4, 0.4),
                 ..default()
             },
             transform: Transform::from_xyz(position, 100.0, position),
             ..default()
         },
+        //Light,
         Name::new("Light")
     );
     commands.spawn(light);
@@ -59,7 +63,7 @@ fn spawn_world(
 
             let tile_type = match col.tile_type {
                 TileType::DeepWater => assets.load("tile_texture/deepwater.png"),
-                TileType::ShallowWater => assets.load("tile_texture/shallowater.png"),
+                TileType::ShallowWater => assets.load("tile_texture/shallow_water.png"),
                 TileType::Sand => assets.load("tile_texture/sand.png"),
                 TileType::Grass => assets.load("tile_texture/grass.png"),
                 TileType::Street => assets.load("tile_texture/road.png"),

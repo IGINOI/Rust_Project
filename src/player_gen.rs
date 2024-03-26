@@ -35,7 +35,7 @@ fn spawn_3d_player(
         PbrBundle{
             mesh: meshes.add(Mesh::from(shape::Cube::new(1.0))),
             material: materials.add(Color::RED.into()),
-            transform: Transform::from_xyz(starting_point.0 as f32 , starting_height as f32 + 1.0, starting_point.1 as f32),
+            transform: Transform::from_xyz(starting_point.1 as f32 , starting_height as f32 + 1.0, starting_point.0 as f32),
             ..default()
         },
         Player3d,
@@ -60,8 +60,8 @@ fn spawn_2d_player(
         style: Style{
             align_self: AlignSelf::Center,
             justify_self: JustifySelf::Start,
-            left: Val::Vw((position.0 as f32) * (MAP_SIZE /world_size as f32)),
-            top: Val::Vw((MAP_SIZE /(world_size as f32 * 2.0)) - ((world_size as f32 /2.0)* (MAP_SIZE /world_size as f32)) + (position.1 as f32*(MAP_SIZE /world_size as f32))),
+            left: Val::Vw((position.1 as f32) * (MAP_SIZE /world_size as f32)),
+            top: Val::Vw((MAP_SIZE /(world_size as f32 * 2.0)) - ((world_size as f32 /2.0)* (MAP_SIZE /world_size as f32)) + (position.0 as f32*(MAP_SIZE /world_size as f32))),
             height: Val::Vw(MAP_SIZE/ world_size as f32),
             width: Val::Vw(MAP_SIZE/world_size as f32),
             ..default()
