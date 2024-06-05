@@ -523,6 +523,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35636a1494ede3b646cc98f74f8e62c773a38a659ebc777a2cf26b9b74171df9"
 
 [[package]]
+name = "bessie"
+version = "0.1.11"
+source = "sparse+https://advancedprogramming.disi.unitn.it/api/v1/crates/"
+checksum = "ed63826c58b67ee7120297df48c7784e50ab04a8c1c3d13232305626c561ec29"
+dependencies = [
+ "rand 0.8.5",
+ "robotics_lib",
+ "strum",
+]
+
+[[package]]
 name = "bevy"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1472,6 +1483,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bob_lib"
+version = "0.1.3"
+source = "sparse+https://advancedprogramming.disi.unitn.it/api/v1/crates/"
+checksum = "360eb47918973f6788ba08f76d3f7dbe45393cd371330996e8c297d0e0b70c3f"
+dependencies = [
+ "diff",
+ "rand 0.8.5",
+ "rayon",
+ "robotics_lib",
+ "strum",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1899,6 +1923,12 @@ dependencies = [
  "quote",
  "syn 1.0.109",
 ]
+
+[[package]]
+name = "diff"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
 
 [[package]]
 name = "digest"
@@ -2574,6 +2604,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ghost_journey_journal"
+version = "0.1.1"
+source = "sparse+https://advancedprogramming.disi.unitn.it/api/v1/crates/"
+checksum = "33983443a8c9c92a34ff2606ceefa5263535059b969b8ecd2629c2ba2d7a2fa1"
+dependencies = [
+ "robotics_lib",
+]
+
+[[package]]
 name = "gif"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2835,12 +2874,20 @@ checksum = "eec1c01eb1de97451ee0d60de7d81cf1e72aabefb021616027f3d1c3ec1c723c"
 name = "gui_project"
 version = "0.1.0"
 dependencies = [
+ "bessie",
  "bevy",
  "bevy-inspector-egui",
  "bevy_extern_events",
  "bevy_third_person_camera",
+ "bob_lib",
+ "ghost_journey_journal",
  "rand 0.8.5",
  "robotics_lib",
+ "strum",
+ "strum_macros",
+ "tRust_us_Path_finding",
+ "tile-resource-mapper-tool",
+ "trustus_resource_collector",
  "worldgen_unwrap",
 ]
 
@@ -4765,6 +4812,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tRust_us_Path_finding"
+version = "0.1.0"
+source = "sparse+https://advancedprogramming.disi.unitn.it/api/v1/crates/"
+checksum = "52ebdf7a1244f05b0f9d5148d018936ae43602cee32af041e2c07de68a53f5a8"
+dependencies = [
+ "rand 0.8.5",
+ "robotics_lib",
+ "strum",
+ "strum_macros",
+]
+
+[[package]]
 name = "taffy"
 version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4857,6 +4916,15 @@ dependencies = [
  "flate2",
  "jpeg-decoder",
  "weezl",
+]
+
+[[package]]
+name = "tile-resource-mapper-tool"
+version = "1.0.1"
+source = "sparse+https://advancedprogramming.disi.unitn.it/api/v1/crates/"
+checksum = "23c2b67e6d4e6c06d6897a776338969ffe36d272c94093f0ddd47d1e3ef25c68"
+dependencies = [
+ "robotics_lib",
 ]
 
 [[package]]
@@ -5008,6 +5076,18 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "trustus_resource_collector"
+version = "0.1.0"
+source = "sparse+https://advancedprogramming.disi.unitn.it/api/v1/crates/"
+checksum = "b00ce9b8bdbebe7a6152c47f4b3eee6ba34e5813ee3193625552390facd4419e"
+dependencies = [
+ "rand 0.8.5",
+ "robotics_lib",
+ "strum",
+ "strum_macros",
 ]
 
 [[package]]
@@ -5405,7 +5485,7 @@ dependencies = [
  "js-sys",
  "log",
  "naga",
- "parking_lot 0.12.1",
+ "parking_lot 0.11.2",
  "profiling",
  "raw-window-handle",
  "smallvec",
@@ -5430,7 +5510,7 @@ dependencies = [
  "codespan-reporting",
  "log",
  "naga",
- "parking_lot 0.12.1",
+ "parking_lot 0.11.2",
  "profiling",
  "raw-window-handle",
  "rustc-hash",
@@ -5468,7 +5548,7 @@ dependencies = [
  "metal",
  "naga",
  "objc",
- "parking_lot 0.12.1",
+ "parking_lot 0.11.2",
  "profiling",
  "range-alloc",
  "raw-window-handle",
