@@ -15,6 +15,7 @@ use player_gen::PlayerPlugin;
 use read_events::ReadEventPlugin;
 use frame_gen::SpawnFramePlugin;
 use runner::MyRobot;
+use crate::runner::RobotAttributes;
 
 mod world_gen;
 mod camera;
@@ -42,7 +43,7 @@ fn main()
     if user_input.trim() == String::from("1"){
         //Spawn the thread in which there will be the Runner logic
         thread::spawn(||{
-            let mut runner = Runner::new(Box::new(MyRobot(Robot::new())), &mut WorldgeneratorUnwrap::init(false, Some(PathBuf::from(WORLD_PATH)))).unwrap();
+            let mut runner = Runner::new(Box::new(MyRobot(Robot::new(), RobotAttributes::new())), &mut WorldgeneratorUnwrap::init(false, Some(PathBuf::from(WORLD_PATH)))).unwrap();
             let mut tick_number = 0;
             thread::sleep(Duration::from_secs(5));
             loop{

@@ -1,36 +1,85 @@
-use std::thread::sleep;
-use std::time::Duration;
-use bevy::prelude::Component;
 use bevy_extern_events::queue_event;
 use rand::Rng;
 use robotics_lib::energy::Energy;
 use robotics_lib::event::events::Event;
-use robotics_lib::interface::{destroy, Direction, go, put, robot_map};
+use robotics_lib::interface::{go, Direction, robot_map};
 use robotics_lib::runner::{Robot, Runnable};
 use robotics_lib::runner::backpack::BackPack;
 use robotics_lib::world::coordinates::Coordinate;
-use robotics_lib::world::tile::Content::Rock;
 use crate::read_events::{ReadRobotEventType, ReadWorldEventType};
-use crate::TICK_DURATION;
 
-#[derive(Component)]
-pub struct MyRobot(pub Robot);
+use std::vec::Vec;
+
+#[derive(Debug)]
+pub enum RobotState{
+    Decision,
+    Deciding,
+    GoingSpiral,
+    Default
+}
+
+pub struct RobotAttributes{
+    //here we have the state of the robot
+    pub state: RobotState,
+
+    //always saved spiral movement
+    pub spiral : Vec<Direction>,
+
+    // current vector of direction of the robot
+    //pub directions: Vec<Direction>,
+
+    //previous direction
+    //pub prev_dir: Direction
+}
+
+impl RobotAttributes{
+    pub fn new() -> RobotAttributes{
+
+        //I want the robot to start going spiral
+        let mut state = RobotState::GoingSpiral;
+
+        //I set the number of movement I want the robot to do
+        let mut mov = 200;
+
+        //I compute the steps I have to do for spiraling
+        let spiral = spiral_directions(mov);
+        let mut directions = spiral_directions(mov);
+
+
+        RobotAttributes{state, spiral}
+
+    }
+}
+
+
+pub struct MyRobot(pub Robot, pub RobotAttributes);
 
 impl Runnable for MyRobot {
     fn process_tick(&mut self, world: &mut robotics_lib::world::World){
-        //I DO NOT HAVE A REAL LOGIC HERE. THE PLAYER SIMPLY MOVES AROUND CASUALLY TRYING TO PUT STREET OR DESTROY CONTENTS IN ORDER TO SEE THE GUI IN ACTION
+        match self.1.state{
+            RobotState::Decision =>{
 
-        let _ = go(self, world, choose_random_direction());
+            }
+            RobotState::Deciding =>{
+
+            }
+            RobotState::GoingSpiral => {
+                if !self.1.spiral.is_empty(){
+                    let next_direction = self.1.spiral.pop();
+                    let _ = go(self, world, next_direction.unwrap());
+                } else {
+                    self.1.state = RobotState::Decision;
+                }
+            }
+            RobotState::Default => {
+
+            }
+        }
+
+
 
         //I use this event in order to being able to update the little map with the robot view
         queue_event(ReadWorldEventType::LittleMapUpdate(robot_map(world).unwrap()));
-
-        //I put a little delay (much smaller then the tick-period) in order do avoid concurrency in the commands;
-        // this should not be necessary when using a tool since we should have a command per game tick.
-        sleep(Duration::from_secs_f32(TICK_DURATION/10.0));
-        let _ = destroy(self, world, choose_random_direction());
-        sleep(Duration::from_secs_f32(TICK_DURATION/10.0));
-        let _ = put(self, world, Rock(0), 1, choose_random_direction());
     }
     fn handle_event(&mut self, event: Event) {
         //here based on the events triggered by the common crate, i trigger my private events
@@ -128,5 +177,53 @@ fn choose_random_direction() -> Direction{
         1 => Direction::Left,
         2 => Direction::Up,
         _ => Direction::Down
+    }
+}
+
+pub fn spiral_directions(n: usize) -> Vec<Direction> {
+    let mut directions = Vec::with_capacity(n);
+    let mut steps = 3;
+    let mut total_directions = 0;
+
+    loop {
+        for _ in 0..steps {
+            if total_directions >= n {
+                directions.reverse();
+                return directions;
+            }
+            directions.push(Direction::Right);
+            total_directions += 1;
+        }
+
+        for _ in 0..steps {
+            if total_directions >= n {
+                directions.reverse();
+                return directions;
+            }
+            directions.push(Direction::Down);
+            total_directions += 1;
+        }
+
+        steps += 3;
+
+        for _ in 0..steps {
+            if total_directions >= n {
+                directions.reverse();
+                return directions;
+            }
+            directions.push(Direction::Left);
+            total_directions += 1;
+        }
+
+        for _ in 0..steps {
+            if total_directions >= n {
+                directions.reverse();
+                return directions;
+            }
+            directions.push(Direction::Up);
+            total_directions += 1;
+        }
+
+        steps += 3;
     }
 }
