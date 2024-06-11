@@ -23,9 +23,10 @@ mod player_gen;
 mod read_events;
 mod frame_gen;
 mod runner;
+mod lumberjack;
 
 //definition of some constants usefull to parametrize some values
-pub const WORLD_PATH: &str = "assets/worlds/world_21_c.bin";
+pub const WORLD_PATH: &str = "assets/worlds/world_50_lumberjack.bin";
 pub const TICK_DURATION: f32 = 1.0;
 pub const SQUARE_FRAME_PATH: &str = "frames/square_frame.png";
 pub const BIG_RECTANGLE_FRAME_PATH: &str = "frames/big_rectangular_frame.png";
