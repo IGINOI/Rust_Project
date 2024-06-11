@@ -51,7 +51,7 @@ fn main()
                 tick_number += 1;
                 println!("tick {}",tick_number);
                 runner.game_tick().expect("Tick error");
-                thread::sleep(Duration::from_secs_f32(TICK_DURATION));
+
             }
         });
         //Start the GUI outside the loop
