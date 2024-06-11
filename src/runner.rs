@@ -1,5 +1,4 @@
 use bevy_extern_events::queue_event;
-use rand::Rng;
 use robotics_lib::energy::Energy;
 use robotics_lib::event::events::Event;
 use robotics_lib::interface::{go, put, destroy, Direction, robot_map};
@@ -20,7 +19,6 @@ use std::time::Duration;
 #[derive(Debug)]
 pub enum RobotState{
     Decision,
-    Deciding,
     GoingSpiral,
     GoingToTree,
     GoingToSell,
@@ -47,18 +45,18 @@ impl RobotAttributes{
     pub fn new() -> RobotAttributes{
 
         //I want the robot to start going spiral
-        let mut state = RobotState::GoingSpiral;
+        let state = RobotState::GoingSpiral;
 
         //I set the number of movement I want the robot to do
-        let mut mov = 50;
+        let mov = 50;
 
-        let mut mappertool = TileMapper {};
+        let mappertool = TileMapper {};
 
         //I compute the steps I have to do for spiraling
         let spiral = spiral_directions(mov);
-        let mut directions = Vec::new();
+        let directions = Vec::new();
 
-        let mut prev_dir = Direction::Right;
+        let prev_dir = Direction::Right;
 
         RobotAttributes{state, directions, mappertool, spiral, prev_dir}
 
@@ -72,15 +70,10 @@ impl Runnable for MyRobot {
     fn process_tick(&mut self, world: &mut robotics_lib::world::World){
         //println!("THE BACKPPACK CONTAINS: {:?}", self.0.backpack);
 
-        println!("THE TREE IN THE BACKPACK ARE: {:?}", self.0.backpack.get_contents().get(&Content::Tree(0)).unwrap());
-        println!("THE COINS IN THE BACKPACK ARE: {:?}", self.0.backpack.get_contents().get(&Content::Coin(0)).unwrap());
-
-
         match self.1.state{
             RobotState::Decision =>{
                 //If backpack is full go to sell otherwise keep collecting trees
                 if *self.0.backpack.get_contents().get(&Content::Coin(0)).unwrap() == 20{
-                    println!("I AM SUPER RICH NOW: MISSION ACCOMPLISHED");
                     self.1.state = RobotState::Default;
                 }else if *self.0.backpack.get_contents().get(&Content::Tree(0)).unwrap() <= 9 {
                     let closest = self.1.mappertool.find_closest(world, self, Content::Tree(0));
@@ -125,10 +118,6 @@ impl Runnable for MyRobot {
                         }
                     }
                 }
-
-            }
-
-            RobotState::Deciding =>{
 
             }
 
@@ -288,16 +277,6 @@ impl Runnable for MyRobot {
     }
 }
 
-fn choose_random_direction() -> Direction{
-    let n = rand::thread_rng().gen_range(0..4);
-    match n {
-        0 => Direction::Right,
-        1 => Direction::Left,
-        2 => Direction::Up,
-        _ => Direction::Down
-    }
-}
-
 pub fn to_coords(obj: Result<MapCoordinate, Box<dyn Error>>) -> Option<(usize,usize)>{
     match obj {
         Ok(a) => {
@@ -305,7 +284,7 @@ pub fn to_coords(obj: Result<MapCoordinate, Box<dyn Error>>) -> Option<(usize,us
             let x = a.get_height();
             return Some((x,y));
         }
-        Err(b) => {return None;}
+        Err(_) => {return None;}
     }
 }
 

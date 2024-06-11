@@ -7,7 +7,6 @@ use robotics_lib::world::World;
 use robotics_lib::interface::look_at_sky;
 use robotics_lib::utils::calculate_cost_go_with_environment;
 use robotics_lib::world::environmental_conditions::EnvironmentalConditions;
-use crate::runner::RobotAttributes;
 
 type Coords = (usize, usize);
 
@@ -50,7 +49,7 @@ pub fn crazy_noisy_bizarre_gps(robot: &impl Runnable, dest: Coords, world: &Worl
 
         let neighbors = get_neighbors(&coords, &tiles);
 
-        for mut neighbor in neighbors {
+        for neighbor in neighbors {
             let next = neighbor.coords;
             let new_cost = cost + neighbor.cost + (neighbor.elevation as isize - elevation as isize).abs() as usize;
 
@@ -93,10 +92,6 @@ impl Neighbors {
             right: None,
         }
     }
-
-    fn create(up: Option<Coords>, down: Option<Coords>, left: Option<Coords>, right: Option<Coords>) -> Self {
-        Self { up, down, left, right }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -107,14 +102,6 @@ pub struct Content {
 }
 
 impl Content {
-    fn new() -> Self {
-        Self {
-            cost: 0,
-            elevation: 0,
-            neighbors: Neighbors::new(),
-        }
-    }
-
     fn create(cost: usize, elevation: usize, neighbors: Neighbors) -> Self {
         Self { cost, elevation, neighbors }
     }
@@ -226,17 +213,7 @@ fn simple_cost(weather_report: EnvironmentalConditions, tile: &Tile) -> usize {
 }
 
 
-pub fn create_table(
-    dest: Coords,
-    opt_map: &Option<HashMap<Coords, Content>>
-) -> Option<Vec<Node>> {
-    opt_map.as_ref().map(|map| {
-        map.iter().map(|(&coords, content)| {
-            let cost = if coords == dest { 0 } else { usize::MAX };
-            Node::create(coords, vec![], cost, content.elevation)
-        }).collect()
-    })
-}
+
 
 pub fn path_to_directions(start: (usize, usize), path: Vec<(usize, usize)>) -> Vec<Direction> {
     let mut directions = vec![];
