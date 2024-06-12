@@ -27,8 +27,8 @@ mod runner;
 mod better_gps;
 
 //definition of some constants usefull to parametrize some values
-pub const WORLD_PATH: &str = "assets/worlds/world_21_c.bin";
-pub const TICK_DURATION: f32 = 1.0;
+pub const WORLD_PATH: &str = "assets/worlds/blanko2";
+pub const TICK_DURATION: f32 = 0.6;
 pub const SQUARE_FRAME_PATH: &str = "frames/square_frame.png";
 pub const BIG_RECTANGLE_FRAME_PATH: &str = "frames/big_rectangular_frame.png";
 pub const LITTLE_RECTANGLE_FRAME_PATH: &str = "frames/little_rectangular_frame.png";

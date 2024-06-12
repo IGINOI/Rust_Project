@@ -5,7 +5,7 @@ use bevy_extern_events::queue_event;
 use rand::Rng;
 use robotics_lib::energy::Energy;
 use robotics_lib::event::events::Event;
-use robotics_lib::interface::{destroy, Direction, go, put, robot_map};
+use robotics_lib::interface::{destroy, Direction, go, put, robot_map, where_am_i};
 use robotics_lib::runner::{Robot, Runnable};
 use robotics_lib::runner::backpack::BackPack;
 use robotics_lib::world::coordinates::Coordinate;
@@ -18,29 +18,55 @@ use std::collections::HashMap;
 use core::mem::Discriminant;
 use core::ops::Range;
 use std::error::Error;
+use std::fs::{File, read_to_string};
+use std::io::BufReader;
+use std::sync::Mutex;
+use std::thread;
 use another_one_bytes_the_dust_tile_resource_mapper_tool::coordinates::map_coordinate::MapCoordinate;
 use another_one_bytes_the_dust_tile_resource_mapper_tool::tool::tile_mapper::TileMapper;
 use std::vec::Vec;
-use bob_lib::tracker::GoalTracker;
+use bob_lib::tracker::{destroy_and_collect_item, Goal, GoalTracker, GoalType, sell_items_in_market, throw_garbage};
+use lazy_static::lazy_static;
 use robotics_lib::world::tile::Content;
 use crate::better_gps::{crazy_noisy_bizarre_gps};
+
+extern crate lazy_static;
+use rodio::{Decoder, OutputStream, Sink, Source};
+use std::sync::{Arc, mpsc, MutexGuard};
+use std::sync::mpsc::{Receiver, RecvError, Sender};
+
+
 
 // use tRust_us_Path_finding::tools::gps;
 // use tRust_us_Path_finding::tools::gps::{Command, Goal, gps};
 // use tile_resource_mapper_tool::tool::tile_resource_mapper_tool{ContentQuantity, TileMapper};
 
+lazy_static!{
+    static ref GLOBAL_TRACKER: Mutex<GoalTracker> = Mutex::new(GoalTracker::new());
+    static ref GLOBAL_SENDER: Mutex<Option<Sender<()>>> = Mutex::new(None);
+}
+
 #[derive(Debug)]
 pub enum RobotState{
     Decision,
-    Deciding,
     GoingSpiral,
     GoingToGoal,
-    Default
+    Default,
+    End
+}
+#[derive(Debug)]
+pub enum GoalState{
+    PickGarbage,
+    ThrowGarbage,
+    PickRock,
+    SellRock
 }
 
 pub struct RobotAttributes{
     //state of the robot
     pub state: RobotState,
+
+    pub goalstate: GoalState,
 
     // always saved spiral movement
     pub spiral : Vec<Direction>,
@@ -55,35 +81,43 @@ pub struct RobotAttributes{
     pub map: Option<HashMap<Discriminant<Content>, Vec<(MapCoordinate, (Option<usize>, Option<Range<usize>>))>>>,
 
     //goal tracker
-    pub tracker: GoalTracker,
+    // pub tracker: GoalTracker,
 
     //previous direction
     pub prev_dir: Direction,
+
+    //recycle or not
+    pub recycle: bool,
 
 }
 impl RobotAttributes{
     pub fn new() -> RobotAttributes{
 
-        let mut state = RobotState::GoingSpiral;
+        let mut state = RobotState::Default;
+        let mut goalstate = GoalState::PickGarbage;
         // creates a vector of directions
-        let mut mov = 200;
+        let mov = 150;
         let spiral = spiral_directions(mov);
         let mut directions = spiral_directions(mov);
 
         let mut mappertool = TileMapper {};
         let mut map = None;
 
-        let mut tracker = GoalTracker::new();
         let mut prev_dir = Direction::Right;
 
+        let mut recycle = false;
+
         // return
-        RobotAttributes{state, spiral, directions, mappertool, map, tracker, prev_dir}
+        RobotAttributes{state, goalstate, spiral, directions, mappertool, map, prev_dir, recycle}
     }
 }
 pub struct MyRobot(pub Robot, pub RobotAttributes);
 
 impl Runnable for MyRobot {
     fn process_tick(&mut self, world: &mut robotics_lib::world::World){
+        let mut tracker = GLOBAL_TRACKER.lock().unwrap();
+        println!("completed quests: {}", tracker.get_completed_number());
+        println!("backpack: {:?}", self.0.backpack);
         // println!("{:?}", where_am_i(self, world));
         println!("{:?}", self.1.directions);
         // println!("{:?}", self.1.prev_dir);
@@ -92,9 +126,16 @@ impl Runnable for MyRobot {
         match self.1.state{
             RobotState::Decision => {
                 self.1.map = TileMapper::collection(world);
-                println!("{:?}", self.1.mappertool.find_closest(world, self, Content::Tree(0)));
+                // println!("{:?}", self.1.mappertool.find_closest(world, self, Content::Garbage(0)));
 
-                let closest = self.1.mappertool.find_closest(world, self, Content::Tree(0));
+                let mut closest;
+
+                match self.1.goalstate {
+                    GoalState::PickGarbage => {closest = self.1.mappertool.find_most_loaded(world, self, Content::Garbage(0).to_default());}
+                    GoalState::ThrowGarbage => {closest = self.1.mappertool.find_most_loaded(world, self, Content::Bin(0..0).to_default());}
+                    GoalState::PickRock => {closest = self.1.mappertool.find_most_loaded(world, self, Content::Rock(0).to_default());}
+                    GoalState::SellRock => {closest = self.1.mappertool.find_most_loaded(world, self, Content::Market(0).to_default());}
+                }
 
                 let coords = to_coords(closest);
                 match coords {
@@ -116,15 +157,9 @@ impl Runnable for MyRobot {
                     }
                 }
             }
-            RobotState::Deciding => {
-
-
-                self.1.state = RobotState::GoingSpiral;
-            }
             RobotState::GoingSpiral => {
 
                 if !self.1.directions.is_empty(){
-                    // println!("prev tile: {:?}", where_am_i(self, world).1);
                     // goes spiral
                     let momdir = self.1.directions.pop();
                     let _ = go(self, world, momdir.unwrap());
@@ -148,16 +183,102 @@ impl Runnable for MyRobot {
                             let _ = go(self, world, a);
                         }
                     }
-
                 }else {
                     let momdir = self.1.directions.pop();
                     self.1.prev_dir = momdir.unwrap().clone();
-                    let _ = destroy(self, world, self.1.prev_dir.clone());
-                    self.1.state = RobotState::Decision;
-                }
-            }
-            //     RobotState::Default => {}
 
+                    match self.1.goalstate {
+                        GoalState::PickGarbage => {
+                            let _ = destroy_and_collect_item(self, world, self.1.prev_dir.clone(), &mut tracker, Some(Content::Garbage(1).to_default()));
+                            let map = self.0.backpack.get_contents();
+                            match map.get(&Content::Garbage(0).to_default()) {
+                                None => {}
+                                Some(a) => {
+                                    if a >= &5 {self.1.goalstate = GoalState::ThrowGarbage;}
+                                }
+                            }
+                            self.1.state = RobotState::Decision;
+                        }
+                        GoalState::ThrowGarbage => {
+                            let _ = throw_garbage(self, world, Content::Garbage(0), 5, self.1.prev_dir.clone(), &mut tracker);
+                            self.1.goalstate = GoalState::PickRock;
+                            self.1.state = RobotState::Decision;
+                        }
+                        GoalState::PickRock => {
+                            let _ = destroy_and_collect_item(self, world, self.1.prev_dir.clone(), &mut tracker, Some(Content::Rock(1).to_default()));
+                            let map = self.0.backpack.get_contents();
+                            match map.get(&Content::Rock(0).to_default()) {
+                                None => {}
+                                Some(a) => {
+                                    if a >= &20 {self.1.goalstate = GoalState::SellRock;}
+                                }
+                            }
+                            self.1.state = RobotState::Decision;
+
+                        }
+                        GoalState::SellRock => {
+                            let _ = sell_items_in_market(self, world, Content::Rock(0).to_default(), 20, self.1.prev_dir.clone(), &mut tracker);
+                            // let _ = put(self, world, Rock(0).to_default(), 20, self.1.prev_dir.clone());
+                            self.1.state = RobotState::End;
+                        }
+                    }
+                    tracker.clean_completed_goals();
+                }
+
+            }
+            RobotState::Default => {
+                let _ = go(self, world, Direction::Right);
+                let _ = go(self, world, Direction::Left);
+
+                let g1 = Goal::new(
+                    "Throw Garbage".to_string(),
+                    "Throw Garbage".to_string(),
+                    GoalType::ThrowGarbage,
+                    None,
+                    5
+                );
+                let g2 = Goal::new(
+                    "Collect Garbage".to_string(),
+                    "Collect Garbage".to_string(),
+                    GoalType::GetItems,
+                    Some(Content::Garbage(1).to_default()),
+                    5
+                );
+                let g3 = Goal::new(
+                    "Collect Rocks".to_string(),
+                    "Collect Rocks".to_string(),
+                    GoalType::GetItems,
+                    Some(Content::Rock(1).to_default()),
+                    20
+                );
+                let g4 = Goal::new(
+                    "Sell Stuff".to_string(),
+                    "Sell Stuff".to_string(),
+                    GoalType::SellItems,
+                    Some(Content::Rock(1).to_default()),
+                    20
+                );
+                tracker.add_goal(g1);
+                tracker.add_goal(g2);
+                tracker.add_goal(g3);
+                tracker.add_goal(g4);
+
+                let sender = start_sound_loop();
+                self.1.state = RobotState::GoingSpiral
+            }
+            RobotState::End => {
+                stop_sound();
+                println!("this is the end");
+                thread::spawn(move || {
+                    let (_stream, stream_handle) = OutputStream::try_default().expect("Impossible to open output stream");
+                    let sink = Sink::try_new(&stream_handle).expect("Impossible to creat the sink");
+                    let file = File::open("src/Victory.mp3").expect("Impossible to open audio file");
+
+                    sink.append(rodio::Decoder::new(std::io::BufReader::new(file)).expect("Impossible to decode audio file"));
+                    sink.sleep_until_end();
+                    sink.detach();
+                });
+            }
             _ => {}
         }
         queue_event(ReadWorldEventType::LittleMapUpdate(robot_map(world).unwrap()));
@@ -210,9 +331,10 @@ impl Runnable for MyRobot {
                         }
                     }
                 }
+                thread::sleep(Duration::from_secs_f32(0.4));
                 queue_event(ReadRobotEventType::AddBackpack(vec_content));
                 if quantity != 0 {
-                queue_event(ReadRobotEventType::MessageLogAddedToBackpack((content, quantity)));
+                    queue_event(ReadRobotEventType::MessageLogAddedToBackpack((content, quantity)));
                 }
             }
 
@@ -261,9 +383,11 @@ fn choose_random_direction() -> Direction{
     }
 }
 
+
+
 pub fn spiral_directions(n: usize) -> Vec<Direction> {
     let mut directions = Vec::with_capacity(n);
-    let mut steps = 1;
+    let mut steps = 3;
     let mut total_directions = 0;
 
     loop {
@@ -285,7 +409,7 @@ pub fn spiral_directions(n: usize) -> Vec<Direction> {
             total_directions += 1;
         }
 
-        steps += 1;
+        steps += 3; // Aumentiamo di due blocchi
 
         for _ in 0..steps {
             if total_directions >= n {
@@ -305,9 +429,10 @@ pub fn spiral_directions(n: usize) -> Vec<Direction> {
             total_directions += 1;
         }
 
-        steps += 1;
+        steps += 3; // Aumentiamo di due blocchi
     }
 }
+
 
 pub fn to_coords(obj: Result<MapCoordinate, Box<dyn Error>>) -> Option<(usize,usize)>{
     match obj {
@@ -321,38 +446,45 @@ pub fn to_coords(obj: Result<MapCoordinate, Box<dyn Error>>) -> Option<(usize,us
 }
 
 
-
-//
-// pub fn gps_to_dir(commands_and_cost: Option<(Vec<Command>, usize)>) -> Vec<Direction>{
-//     println!("funzione");
-//     let mut vec = vec![];
-//     match commands_and_cost {
-//
-//         None => {
-//             println!("none");
-//
-//         }
-//         Some((a, b)) => {
-//             println!("some");
-//             for x in a {
-//                 match x {
-//                     Control(b) => {vec.push(b)}
-//                     Destroy(_) => {}
-//                 }
-//             }
-//
-//             println!("{:?}", vec);
-//         }
-//     }
-//     vec.reverse();
-//     vec
-// }
-//
 pub fn opposite_dir(dir: Direction) -> Direction{
     match dir {
         Direction::Up => {return Direction::Down;}
         Direction::Down => {return Direction::Up;}
         Direction::Left => {return Direction::Right;}
         Direction::Right => {return Direction::Left;}
+    }
+}
+
+fn start_sound_loop() -> Sender<()> {
+    let (stop_tx, stop_rx): (Sender<()>, Receiver<()>) = mpsc::channel();
+
+    {
+        let mut sender = GLOBAL_SENDER.lock().unwrap();
+        *sender = Some(stop_tx.clone());
+    }
+
+    thread::spawn(move || {
+        let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+        let file = BufReader::new(File::open("src/Speedrun.mp3").unwrap());
+        let source = Decoder::new(file).unwrap();
+
+        let sink = Sink::try_new(&stream_handle).unwrap();
+        sink.set_volume(0.5);
+        sink.append(source.repeat_infinite());
+
+        loop {
+            if stop_rx.try_recv().is_ok() {
+                sink.stop();
+                break;
+            }
+        }
+    });
+
+    stop_tx
+}
+
+fn stop_sound() {
+    if let Some(sender) = &*GLOBAL_SENDER.lock().unwrap() {
+        sender.send(()).unwrap();
     }
 }

@@ -13,6 +13,8 @@ bevy_third_person_camera = "0.1.7"
 bevy-inspector-egui = "0.21.0"
 bevy_extern_events = "0.3.0"
 rand = "0.8.5"
+lazy_static = "1.4"
+rodio = "0.17.3"
 
 trustus_resource_collector = {version = "0.1.0", registry = "kellnr"}
 tRust_us_Path_finding = {version = "0.1.0", registry = "kellnr"}
