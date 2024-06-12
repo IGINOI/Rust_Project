@@ -13,7 +13,51 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="57620cbf-17c7-4c10-85e4-e81d3a6b3850" name="Changes" comment="first version of my robot">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/worlds/blanko" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/craft/crafting_sound.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/default/default_sound.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/destroying/chopping_bush.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/destroying/chopping_wood.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/destroying/collecting_coin.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/destroying/collecting_water.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/destroying/destroying_jollyblock.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/destroying/fire_extinguishing.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/destroying/mining_rock.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/destroying/picking_crate.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/destroying/picking_fish.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/destroying/throwing_garbage.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/energy/has_not_energy.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/put/coin_in_bank.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/put/content_in_market.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/put/content_in_tile.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/put/empty_in_mountain.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/put/fire_in_tree_empty.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/put/garbage_in_bin.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/put/rock_in_g_h_s_s.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/put/rock_in_lava.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/put/rock_in_water.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/put/tree_in_crate.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/put/water_in_fire.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/teleport/teleport.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/walking/entering_water.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/walking/walking_asphalt.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/walking/walking_grass.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/walking/walking_hill.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/walking/walking_mountain.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/walking/walking_sand.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/walking/walking_snow.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/walking/walking_teleport.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/walking/walking_water.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/weather/foggy_sound.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/weather/rainy_sound.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/weather/sunny_sound.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/weather/trentino_snow_sound.mp3" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/sounds/weather/tropical_monsoon_sound.mp3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/runner.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/runner.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,7 +93,7 @@
     &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
     &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;sound__tool&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/Adv Prog/OwnerSheepsAudioTest&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/Adv Prog/Sound_Tool_Test/Bevy_GUI/src&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -61,6 +105,9 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\Adv Prog\Sound_Tool_Test\Bevy_GUI\src" />
+      <recent name="C:\Users\nicoc\.cargo\registry\src\advancedprogramming.disi.unitn.it-041ec4cdd524e67e\OwnerSheeps_Sound_Tool-0.1.0\src" />
+      <recent name="D:\Adv Prog\Sound_Tool_Test\Bevy_GUI\assets\worlds" />
       <recent name="D:\Adv Prog\Bevy_GUI\src" />
     </key>
   </component>
@@ -77,6 +124,9 @@
       <updated>1717617772723</updated>
       <workItem from="1717617773839" duration="2599000" />
       <workItem from="1717620842024" duration="464000" />
+      <workItem from="1718185257122" duration="1219000" />
+      <workItem from="1718189910654" duration="5971000" />
+      <workItem from="1718196732957" duration="699000" />
     </task>
     <servers />
   </component>

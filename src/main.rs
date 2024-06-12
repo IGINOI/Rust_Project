@@ -5,6 +5,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
 use bevy_third_person_camera::*;
+use OwnerSheeps_Sound_Tool::functions::weather_sounds::weather_sound_init;
 use robotics_lib::runner::{Robot, Runner};
 use robotics_lib::world::world_generator::Generator;
 use worldgen_unwrap::public::WorldgeneratorUnwrap;
@@ -15,6 +16,7 @@ use player_gen::PlayerPlugin;
 use read_events::ReadEventPlugin;
 use frame_gen::SpawnFramePlugin;
 use runner::MyRobot;
+use crate::runner::RobotAttributes;
 
 mod world_gen;
 mod camera;
@@ -24,7 +26,7 @@ mod frame_gen;
 mod runner;
 
 //definition of some constants usefull to parametrize some values
-pub const WORLD_PATH: &str = "assets/worlds/world_21_c.bin";
+pub const WORLD_PATH: &str = "assets/worlds/blanko";
 pub const TICK_DURATION: f32 = 1.0;
 pub const SQUARE_FRAME_PATH: &str = "frames/square_frame.png";
 pub const BIG_RECTANGLE_FRAME_PATH: &str = "frames/big_rectangular_frame.png";
@@ -42,7 +44,7 @@ fn main()
     if user_input.trim() == String::from("1"){
         //Spawn the thread in which there will be the Runner logic
         thread::spawn(||{
-            let mut runner = Runner::new(Box::new(MyRobot(Robot::new())), &mut WorldgeneratorUnwrap::init(false, Some(PathBuf::from(WORLD_PATH)))).unwrap();
+            let mut runner = Runner::new(Box::new(MyRobot(Robot::new(), RobotAttributes::new())), &mut WorldgeneratorUnwrap::init(false, Some(PathBuf::from(WORLD_PATH)))).unwrap();
             let mut tick_number = 0;
             thread::sleep(Duration::from_secs(5));
             loop{
@@ -54,6 +56,7 @@ fn main()
         });
         //Start the GUI outside the loop
         start_gui();
+
     }
     else if user_input.trim() == String::from("2"){
         gen_new_world();

@@ -1,36 +1,81 @@
+use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
-use bevy::prelude::Component;
+use bevy::ui::AlignItems::Default;
+use bevy::ui::UiPassNode;
 use bevy_extern_events::queue_event;
+use OwnerSheeps_Sound_Tool::functions::interface_sound::{craft_with_sound, destroy_with_sound, go_with_sound, put_with_sound};
+use OwnerSheeps_Sound_Tool::functions::weather_sounds::{weather_sound, weather_sound_init};
 use rand::Rng;
 use robotics_lib::energy::Energy;
 use robotics_lib::event::events::Event;
 use robotics_lib::interface::{destroy, Direction, go, put, robot_map};
+use robotics_lib::interface::Direction::{Down, Up, Left, Right};
 use robotics_lib::runner::{Robot, Runnable};
 use robotics_lib::runner::backpack::BackPack;
 use robotics_lib::world::coordinates::Coordinate;
+use robotics_lib::world::tile::{Content, ContentProps};
 use robotics_lib::world::tile::Content::Rock;
 use crate::read_events::{ReadRobotEventType, ReadWorldEventType};
+use crate::runner::Action::{Destroy, Put, Go, Craft};
 use crate::TICK_DURATION;
 
-#[derive(Component)]
-pub struct MyRobot(pub Robot);
+pub enum Action{
+    Destroy,
+    Put,
+    Go,
+    Craft
+}
+pub struct RobotAttributes{
+    actions: Vec<(Action, Direction)>,
+    first: bool,
+}
+impl RobotAttributes{
+    pub fn new()-> Self{
+        let mut vec = get_actions();
+        vec.reverse();
+        Self{ actions: vec, first: true }
+    }
+}
+pub struct MyRobot(pub Robot, pub RobotAttributes);
 
 impl Runnable for MyRobot {
     fn process_tick(&mut self, world: &mut robotics_lib::world::World){
-        //I DO NOT HAVE A REAL LOGIC HERE. THE PLAYER SIMPLY MOVES AROUND CASUALLY TRYING TO PUT STREET OR DESTROY CONTENTS IN ORDER TO SEE THE GUI IN ACTION
+        if self.1.first{
+            weather_sound_init();
+            self.1.first = false;
+        }
 
-        let _ = go(self, world, choose_random_direction());
+        let action = self.1.actions.pop();
+        match action{
+            None => {}
+            Some((a,b)) => {
+                match a{
+                    Destroy => {
+                        let _ = destroy_with_sound(self, world, b);
+                    }
+                    Put => {
+                        let map = self.0.backpack.get_contents();
+                        let mut content= Content::Rock(0).to_default();
+                        for elem in map{
+                            if elem.1 != &0{
+                                content = elem.0.clone();
+                            }
+                        }
+                        let _ = put_with_sound(self, world, content.clone(), 1, b);
+                    }
+                    Go => {
+                        let _ = go_with_sound(self, world, b);
+                    }
+                    Craft => {
+                        let _ = craft_with_sound(self, Content::JollyBlock(0).to_default());
+                    }
+                }
+            }
+        }
 
-        //I use this event in order to being able to update the little map with the robot view
+        weather_sound(world);
         queue_event(ReadWorldEventType::LittleMapUpdate(robot_map(world).unwrap()));
-
-        //I put a little delay (much smaller then the tick-period) in order do avoid concurrency in the commands;
-        // this should not be necessary when using a tool since we should have a command per game tick.
-        sleep(Duration::from_secs_f32(TICK_DURATION/10.0));
-        let _ = destroy(self, world, choose_random_direction());
-        sleep(Duration::from_secs_f32(TICK_DURATION/10.0));
-        let _ = put(self, world, Rock(0), 1, choose_random_direction());
     }
     fn handle_event(&mut self, event: Event) {
         //here based on the events triggered by the common crate, i trigger my private events
@@ -80,6 +125,7 @@ impl Runnable for MyRobot {
                         }
                     }
                 }
+                // thread::sleep(Duration::from_secs_f32(0.4));
                 queue_event(ReadRobotEventType::AddBackpack(vec_content));
                 if quantity != 0 {
                 queue_event(ReadRobotEventType::MessageLogAddedToBackpack((content, quantity)));
@@ -129,4 +175,67 @@ fn choose_random_direction() -> Direction{
         2 => Direction::Up,
         _ => Direction::Down
     }
+}
+
+
+pub fn get_actions() -> Vec<(Action, Direction)>{
+    vec![
+        (Destroy, Down),
+        (Put, Up),
+        (Go, Right),
+        (Go, Right),
+        (Destroy, Down),
+        (Put, Up),
+        (Go, Right),
+        (Go, Right),
+        (Destroy, Down),
+        (Put, Up),
+        (Go, Right),
+        (Go, Right),
+        (Destroy, Down),
+        (Put, Up),
+        (Go, Right),
+        (Go, Right),
+        (Destroy, Down),
+        (Put, Up),
+        (Go, Right),
+        (Go, Right),
+        (Destroy, Down),
+        (Put, Up),
+        (Go, Right),
+        (Go, Right),
+        (Destroy, Down),
+        (Put, Up),
+        (Go, Right),
+        (Go, Right),
+        (Destroy, Down),
+        (Put, Up),
+        (Go, Right),
+        (Put, Up),
+        (Go, Right),
+        (Destroy, Down),
+        (Craft, Up),
+        (Put, Up),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Go, Down),
+        (Destroy, Down),
+        (Put, Down),
+        (Go, Right),
+        (Destroy, Down),
+        (Put, Down),
+    ]
 }
