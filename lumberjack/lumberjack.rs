@@ -1,11 +1,11 @@
 use std::collections::{HashMap, BinaryHeap};
 use std::cmp::Ordering;
-use robotics_lib::interface::{Direction, robot_map, where_am_i};
+use robotics_lib::interface::{Direction, destroy, robot_view, put, robot_map, where_am_i};
 use robotics_lib::runner::Runnable;
 use robotics_lib::world::tile::{Tile, Content};
 use robotics_lib::world::World;
 use robotics_lib::interface::look_at_sky;
-use robotics_lib::utils::calculate_cost_go_with_environment;
+use robotics_lib::utils::{calculate_cost_go_with_environment, LibError};
 use robotics_lib::world::environmental_conditions::EnvironmentalConditions;
 extern crate num;
 
@@ -13,53 +13,11 @@ use num::abs;
 
 type Coords = (usize, usize);
 
-fn find_stuff(robot:&impl Runnable, mut world: &World, market: bool) -> (usize, usize) {
-    let self_x = robot.get_coordinate().get_row();
-    let self_y = robot.get_coordinate().get_col();
-
-    let robot_map = robot_map(&mut world).unwrap();
-
-    let mut smaller_distance = 1000;
-    let mut current_distance ;
-    let mut resource_coordinates: (usize, usize) = (10000, 10000);
-    for x in 0..robot_map.len(){
-        for y in 0..robot_map.len(){
-            match robot_map[x][y].clone(){
-                None => {}
-                Some(tile) => {
-                    match tile.content {
-                        Content::Tree(_) => {
-                            if !market {
-                                current_distance = abs(self_x as i32 - x as i32) + abs(self_y as i32 - y as i32);
-                                if current_distance < smaller_distance {
-                                    resource_coordinates = (x, y);
-                                    smaller_distance = current_distance;
-                                    println!("The smaller distance is: {:?}", current_distance);
-                                }
-                            }
-                        },
-                        Content::Market(_) => {
-                            if market {
-                                current_distance = abs(self_x as i32 - x as i32) + abs(self_y as i32 - y as i32);
-                                if current_distance < smaller_distance {
-                                    resource_coordinates = (x, y);
-                                    smaller_distance = current_distance;
-                                    println!("The smaller distance is: {:?}", current_distance);
-                                }
-                            }
-                        },
-                        _ => {}
-                    }
-                }
-            }
-        }
-    }
-    println!("{:?}", resource_coordinates);
-    return resource_coordinates;
-}
-
-pub fn crazy_noisy_bizarre_gps(robot: &impl Runnable, world: &World, market: bool) -> Option<Vec<Direction>> {
-    let dest = find_stuff(robot, world, market);
+/// This function computes the steps to arrive to an object
+/// Takes as inputs: a &impl Runnable (your robot), a &World (which is your world), a bool (with which you can select if you are searching for wood or for a market to sell the wood you previously bought)
+/// Gives as output a vector that contains the directions to follow to arrive to the closest object (market or wood)
+pub fn find_path(robot: &impl Runnable, world: &World, market: bool) -> Option<Vec<Direction>> {
+    let dest = find_closest_object(robot, world, market);
     // Debug: Verifica che il robot e il mondo siano validi
     //println!("Robot position: {:?}", where_am_i(robot, world).1);
     let starting_point = where_am_i(robot, world).1;
@@ -115,6 +73,143 @@ pub fn crazy_noisy_bizarre_gps(robot: &impl Runnable, world: &World, market: boo
     // Debug: Stampa un messaggio se non è stato trovato alcun percorso
     println!("No path found");
     None
+}
+
+/// This function finds the closest object to the robot.
+/// It takes in input: a &impl Runnable (your robot), a &World (which is your world), a bool (with which you can select if you are searching for wood or for a market to sell the wood you previously bought)
+/// It returns the coordinates to the closest content you are searching for.
+/// This function is usually automatically called from the find_path function, but you can use it also separately
+fn find_closest_object(robot:&impl Runnable, mut world: &World, market: bool) -> (usize, usize) {
+    let self_x = robot.get_coordinate().get_row();
+    let self_y = robot.get_coordinate().get_col();
+
+    let robot_map = robot_map(&mut world).unwrap();
+
+    let mut smaller_distance = 1000;
+    let mut current_distance ;
+    let mut resource_coordinates: (usize, usize) = (10000, 10000);
+    for x in 0..robot_map.len(){
+        for y in 0..robot_map.len(){
+            match robot_map[x][y].clone(){
+                None => {}
+                Some(tile) => {
+                    match tile.content {
+                        Content::Tree(_) => {
+                            if !market {
+                                current_distance = abs(self_x as i32 - x as i32) + abs(self_y as i32 - y as i32);
+                                if current_distance < smaller_distance {
+                                    resource_coordinates = (x, y);
+                                    smaller_distance = current_distance;
+                                    println!("The smaller distance is: {:?}", current_distance);
+                                }
+                            }
+                        },
+                        Content::Market(_) => {
+                            if market {
+                                current_distance = abs(self_x as i32 - x as i32) + abs(self_y as i32 - y as i32);
+                                if current_distance < smaller_distance {
+                                    resource_coordinates = (x, y);
+                                    smaller_distance = current_distance;
+                                    println!("The smaller distance is: {:?}", current_distance);
+                                }
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+    println!("{:?}", resource_coordinates);
+    return resource_coordinates;
+}
+
+
+/// This function tries to chop wood in all the 4 direction, useful if you are in the middle of a lot of trees.
+/// You can use it combined to the previous tool to make the chopping faster.
+/// It returns a vector of direction of the braking attempt combined with its result from the 'destroy' interface
+pub fn chop_wood(robot: &mut impl Runnable, world: &mut World) -> Vec<(Direction, Result<usize, LibError>)> {
+    let r_view = robot_view(robot, world);
+    let mut directions_to_remove = Vec::new();
+
+    match &r_view[0][1] {
+        Some(tile) => match tile.content {
+            Content::Tree(_) => { directions_to_remove.push(Direction::Up) }
+            _ => {}
+        },
+        _ => {}
+    }
+    match &r_view[2][1] {
+        Some(tile) => match tile.content {
+            Content::Tree(_) => { directions_to_remove.push(Direction::Down) }
+            _ => {}
+        },
+        _ => {}
+    }
+    match &r_view[1][0] {
+        Some(tile) => match tile.content {
+            Content::Tree(_) => { directions_to_remove.push(Direction::Left) }
+            _ => {}
+        },
+        _ => {}
+    }
+    match &r_view[1][2] {
+        Some(tile) => match tile.content {
+            Content::Tree(_) => { directions_to_remove.push(Direction::Right) }
+            _ => {}
+        },
+        _ => {}
+    }
+
+    let mut action_result: Vec<(Direction, Result<usize, LibError>)> = Vec::new();
+    for direction in directions_to_remove {
+        action_result.push((direction.clone(), destroy(robot, world, direction.clone())));
+    }
+    action_result
+}
+
+/// This function tries to sell wood in all the 4 direction.
+/// You can use it combined to the previous tool to make the selling faster.
+/// It returns a vector of direction of the braking attempt combined with its result from the 'put' interface
+pub fn sell_wood(robot: &mut impl Runnable, world: &mut World, quantity: usize) -> Vec<(Direction, Result<usize, LibError>)> {
+    let r_view = robot_view(robot, world);
+    let mut directions_to_remove = Vec::new();
+
+    match &r_view[0][1] {
+        Some(tile) => match tile.content {
+            Content::Market(_) => { directions_to_remove.push(Direction::Up) }
+            _ => {}
+        },
+        _ => {}
+    }
+    match &r_view[2][1] {
+        Some(tile) => match tile.content {
+            Content::Market(_) => { directions_to_remove.push(Direction::Down) }
+            _ => {}
+        },
+        _ => {}
+    }
+    match &r_view[1][0] {
+        Some(tile) => match tile.content {
+            Content::Market(_) => { directions_to_remove.push(Direction::Left) }
+            _ => {}
+        },
+        _ => {}
+    }
+    match &r_view[1][2] {
+        Some(tile) => match tile.content {
+            Content::Market(_) => { directions_to_remove.push(Direction::Right) }
+            _ => {}
+        },
+        _ => {}
+    }
+
+    let content_in = Content::Tree(quantity);
+    let mut action_result: Vec<(Direction, Result<usize, LibError>)> = Vec::new();
+    for direction in directions_to_remove {
+        action_result.push((direction.clone(), put(robot, world, content_in.clone(), quantity.clone(), direction.clone())));
+    }
+    action_result
 }
 
 
@@ -289,3 +384,5 @@ pub fn path_to_directions(start: (usize, usize), path: Vec<(usize, usize)>) -> V
 
     directions
 }
+
+

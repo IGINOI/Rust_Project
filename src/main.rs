@@ -23,6 +23,7 @@ mod player_gen;
 mod read_events;
 mod frame_gen;
 mod runner;
+#[path = "../lumberjack/lumberjack.rs"]
 mod lumberjack;
 
 //definition of some constants usefull to parametrize some values

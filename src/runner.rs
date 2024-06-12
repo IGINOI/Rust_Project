@@ -9,9 +9,14 @@ use robotics_lib::world::tile::Content;
 use crate::read_events::{ReadRobotEventType, ReadWorldEventType};
 
 use std::vec::Vec;
-use crate::lumberjack::{crazy_noisy_bizarre_gps};
 use std::thread;
 use std::time::Duration;
+
+#[path = "../lumberjack/lumberjack.rs"]
+mod lumberjack;
+use lumberjack::{find_path};
+
+
 
 #[derive(Debug)]
 pub enum RobotState{
@@ -69,7 +74,7 @@ impl Runnable for MyRobot {
                 if *self.0.backpack.get_contents().get(&Content::Coin(0)).unwrap() == 20{
                     self.1.state = RobotState::Default;
                 }else if *self.0.backpack.get_contents().get(&Content::Tree(0)).unwrap() <= 9 {
-                    let direction_vector = crazy_noisy_bizarre_gps(self,  world, false);
+                    let direction_vector = find_path(self, world, false);
                     match direction_vector {
                         None => {
                             println!("qualcosa è andato storto 2");
@@ -80,7 +85,7 @@ impl Runnable for MyRobot {
                         }
                     }
                 }else{
-                    let direction_vector = crazy_noisy_bizarre_gps(self, world, true);
+                    let direction_vector = find_path(self, world, true);
                     match direction_vector{
                         None => {
                             println!("qualcosa è andato storto 2");
