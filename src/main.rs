@@ -27,7 +27,7 @@ mod lumberjack;
 
 //definition of some constants usefull to parametrize some values
 pub const WORLD_PATH: &str = "assets/worlds/world_50_lumberjack.bin";
-pub const TICK_DURATION: f32 = 1.0;
+pub const TICK_DURATION: f32 = 0.5;
 pub const SQUARE_FRAME_PATH: &str = "frames/square_frame.png";
 pub const BIG_RECTANGLE_FRAME_PATH: &str = "frames/big_rectangular_frame.png";
 pub const LITTLE_RECTANGLE_FRAME_PATH: &str = "frames/little_rectangular_frame.png";
@@ -51,7 +51,7 @@ fn main()
                 tick_number += 1;
                 println!("tick {}",tick_number);
                 runner.game_tick().expect("Tick error");
-
+                thread::sleep(Duration::from_secs_f32(TICK_DURATION));
             }
         });
         //Start the GUI outside the loop

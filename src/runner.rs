@@ -9,10 +9,7 @@ use robotics_lib::world::tile::Content;
 use crate::read_events::{ReadRobotEventType, ReadWorldEventType};
 
 use std::vec::Vec;
-use another_one_bytes_the_dust_tile_resource_mapper_tool::tool::tile_mapper::TileMapper;
-use another_one_bytes_the_dust_tile_resource_mapper_tool::coordinates::map_coordinate::MapCoordinate;
 use crate::lumberjack::{crazy_noisy_bizarre_gps};
-use std::error::Error;
 use std::thread;
 use std::time::Duration;
 
@@ -35,8 +32,6 @@ pub struct RobotAttributes{
     // current vector of direction of the robot
     pub directions: Vec<Direction>,
 
-    pub mappertool: TileMapper,
-
     //previous direction
     pub prev_dir: Direction
 }
@@ -50,15 +45,13 @@ impl RobotAttributes{
         //I set the number of movement I want the robot to do
         let mov = 50;
 
-        let mappertool = TileMapper {};
-
         //I compute the steps I have to do for spiraling
         let spiral = spiral_directions(mov);
         let directions = Vec::new();
 
         let prev_dir = Direction::Right;
 
-        RobotAttributes{state, directions, mappertool, spiral, prev_dir}
+        RobotAttributes{state, directions, spiral, prev_dir}
 
     }
 }
@@ -76,49 +69,28 @@ impl Runnable for MyRobot {
                 if *self.0.backpack.get_contents().get(&Content::Coin(0)).unwrap() == 20{
                     self.1.state = RobotState::Default;
                 }else if *self.0.backpack.get_contents().get(&Content::Tree(0)).unwrap() <= 9 {
-                    let closest = self.1.mappertool.find_closest(world, self, Content::Tree(0));
-                    let coords_to_closest = to_coords(closest);
-
-                    match coords_to_closest {
+                    let direction_vector = crazy_noisy_bizarre_gps(self,  world, false);
+                    match direction_vector {
                         None => {
-                            println!("The function coords_to_closest gi");
+                            println!("qualcosa è andato storto 2");
                         }
-                        Some(coord_to_closest) => {
-                            let direction_vector = crazy_noisy_bizarre_gps(self, coord_to_closest, world);
-                            match direction_vector {
-                                None => {
-                                    println!("qualcosa è andato storto 2");
-                                }
-                                Some(vector_of_directions) => {
-                                    self.1.directions = vector_of_directions;
-                                    self.1.state = RobotState::GoingToTree;
-                                }
-                            }
+                        Some(vector_of_directions) => {
+                            self.1.directions = vector_of_directions;
+                            self.1.state = RobotState::GoingToTree;
                         }
                     }
                 }else{
-                    let closest = self.1.mappertool.find_closest(world, self, Content::Market(0));
-                    let coords_to_closest = to_coords(closest);
-
-                    match coords_to_closest {
+                    let direction_vector = crazy_noisy_bizarre_gps(self, world, true);
+                    match direction_vector{
                         None => {
-                            println!("The function coords_to_closest gi");
+                            println!("qualcosa è andato storto 2");
                         }
-                        Some(coord_to_closest) => {
-                            let direction_vector = crazy_noisy_bizarre_gps(self, coord_to_closest, world);
-                            match direction_vector{
-                                None => {
-                                    println!("qualcosa è andato storto 2");
-                                }
-                                Some(vector_of_directions) =>{
-                                    self.1.directions = vector_of_directions;
-                                    self.1.state = RobotState::GoingToSell;
-                                }
-                            }
+                        Some(vector_of_directions) =>{
+                            self.1.directions = vector_of_directions;
+                            self.1.state = RobotState::GoingToSell;
                         }
                     }
                 }
-
             }
 
             RobotState::GoingSpiral => {
@@ -274,17 +246,6 @@ impl Runnable for MyRobot {
     }
     fn get_backpack_mut(&mut self) -> &mut BackPack {
         &mut self.0.backpack
-    }
-}
-
-pub fn to_coords(obj: Result<MapCoordinate, Box<dyn Error>>) -> Option<(usize,usize)>{
-    match obj {
-        Ok(a) => {
-            let y = a.get_width();
-            let x = a.get_height();
-            return Some((x,y));
-        }
-        Err(_) => {return None;}
     }
 }
 

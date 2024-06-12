@@ -2,24 +2,71 @@ use std::collections::{HashMap, BinaryHeap};
 use std::cmp::Ordering;
 use robotics_lib::interface::{Direction, robot_map, where_am_i};
 use robotics_lib::runner::Runnable;
-use robotics_lib::world::tile::Tile;
+use robotics_lib::world::tile::{Tile, Content};
 use robotics_lib::world::World;
 use robotics_lib::interface::look_at_sky;
 use robotics_lib::utils::calculate_cost_go_with_environment;
 use robotics_lib::world::environmental_conditions::EnvironmentalConditions;
+extern crate num;
+
+use num::abs;
 
 type Coords = (usize, usize);
 
+fn find_stuff(robot:&impl Runnable, mut world: &World, market: bool) -> (usize, usize) {
+    let self_x = robot.get_coordinate().get_row();
+    let self_y = robot.get_coordinate().get_col();
 
+    let robot_map = robot_map(&mut world).unwrap();
 
-pub fn crazy_noisy_bizarre_gps(robot: &impl Runnable, dest: Coords, world: &World) -> Option<Vec<Direction>> {
+    let mut smaller_distance = 1000;
+    let mut current_distance ;
+    let mut resource_coordinates: (usize, usize) = (10000, 10000);
+    for x in 0..robot_map.len(){
+        for y in 0..robot_map.len(){
+            match robot_map[x][y].clone(){
+                None => {}
+                Some(tile) => {
+                    match tile.content {
+                        Content::Tree(_) => {
+                            if !market {
+                                current_distance = abs(self_x as i32 - x as i32) + abs(self_y as i32 - y as i32);
+                                if current_distance < smaller_distance {
+                                    resource_coordinates = (x, y);
+                                    smaller_distance = current_distance;
+                                    println!("The smaller distance is: {:?}", current_distance);
+                                }
+                            }
+                        },
+                        Content::Market(_) => {
+                            if market {
+                                current_distance = abs(self_x as i32 - x as i32) + abs(self_y as i32 - y as i32);
+                                if current_distance < smaller_distance {
+                                    resource_coordinates = (x, y);
+                                    smaller_distance = current_distance;
+                                    println!("The smaller distance is: {:?}", current_distance);
+                                }
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+    println!("{:?}", resource_coordinates);
+    return resource_coordinates;
+}
+
+pub fn crazy_noisy_bizarre_gps(robot: &impl Runnable, world: &World, market: bool) -> Option<Vec<Direction>> {
+    let dest = find_stuff(robot, world, market);
     // Debug: Verifica che il robot e il mondo siano validi
     //println!("Robot position: {:?}", where_am_i(robot, world).1);
     let starting_point = where_am_i(robot, world).1;
     //println!("Destination: {:?}", dest);
 
     // Creazione della mappa con tutte le tile
-    let tiles: HashMap<Coords, Content> = create_map(world)?;
+    let tiles: HashMap<Coords, Contents> = create_map(world)?;
     //println!("Map created with {} tiles", tiles.len());
 
     // Creazione delle strutture di supporto per il percorso
@@ -95,13 +142,13 @@ impl Neighbors {
 }
 
 #[derive(Debug, Clone)]
-pub struct Content {
+pub struct Contents {
     cost: usize,
     elevation: usize,
     neighbors: Neighbors,
 }
 
-impl Content {
+impl Contents {
     fn create(cost: usize, elevation: usize, neighbors: Neighbors) -> Self {
         Self { cost, elevation, neighbors }
     }
@@ -152,7 +199,7 @@ impl PartialEq for Node {
 
 impl Eq for Node {}
 
-pub fn get_neighbors(coords: &Coords, map: &HashMap<Coords, Content>) -> Vec<Node> {
+pub fn get_neighbors(coords: &Coords, map: &HashMap<Coords, Contents>) -> Vec<Node> {
     let mut vec = vec![];
     if let Some(content) = map.get(coords) {
         let neighbors = &content.neighbors;
@@ -174,7 +221,7 @@ pub fn get_neighbors(coords: &Coords, map: &HashMap<Coords, Content>) -> Vec<Nod
     vec
 }
 
-pub fn create_map(world: &World) -> Option<HashMap<Coords, Content>> {
+pub fn create_map(world: &World) -> Option<HashMap<Coords, Contents>> {
     let mut map = HashMap::new();
     let opt_map = robot_map(world)?;
 
@@ -199,7 +246,7 @@ pub fn create_map(world: &World) -> Option<HashMap<Coords, Content>> {
                     neighbors.down = opt_map.get(y).and_then(|row| row.get(x + 1)).map(|_| (x + 1, y));
                 }
 
-                map.insert(coords, Content::create(cost, elevation, neighbors));
+                map.insert(coords, Contents::create(cost, elevation, neighbors));
             }
         }
     }

@@ -13,5 +13,4 @@ bevy_third_person_camera = "0.1.7"
 bevy-inspector-egui = "0.21.0"
 bevy_extern_events = "0.3.0"
 rand = "0.8.5"
-
-tile-resource-mapper-tool = {version = "1.0.1", registry = "kellnr"}
+num = "0.4"
