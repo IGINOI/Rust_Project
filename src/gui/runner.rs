@@ -1,36 +1,20 @@
-use std::thread::sleep;
-use std::time::Duration;
 use bevy::prelude::Component;
 use bevy_extern_events::queue_event;
-use rand::Rng;
 use robotics_lib::energy::Energy;
 use robotics_lib::event::events::Event;
-use robotics_lib::interface::{destroy, Direction, go, put, robot_map};
+use robotics_lib::interface::robot_map;
 use robotics_lib::runner::{Robot, Runnable};
 use robotics_lib::runner::backpack::BackPack;
 use robotics_lib::world::coordinates::Coordinate;
-use robotics_lib::world::tile::Content::Rock;
-use crate::read_events::{ReadRobotEventType, ReadWorldEventType};
-use crate::TICK_DURATION;
+use crate::gui::read_events::{ReadRobotEventType, ReadWorldEventType};
 
 #[derive(Component)]
 pub struct MyRobot(pub Robot);
 
 impl Runnable for MyRobot {
     fn process_tick(&mut self, world: &mut robotics_lib::world::World){
-        //I DO NOT HAVE A REAL LOGIC HERE. THE PLAYER SIMPLY MOVES AROUND CASUALLY TRYING TO PUT STREET OR DESTROY CONTENTS IN ORDER TO SEE THE GUI IN ACTION
-
-        let _ = go(self, world, choose_random_direction());
-
-        //I use this event in order to being able to update the little map with the robot view
+        //THE LINE TO PUT AT THE END OF THE PROCESS TICK
         queue_event(ReadWorldEventType::LittleMapUpdate(robot_map(world).unwrap()));
-
-        //I put a little delay (much smaller then the tick-period) in order do avoid concurrency in the commands;
-        // this should not be necessary when using a tool since we should have a command per game tick.
-        sleep(Duration::from_secs_f32(TICK_DURATION/10.0));
-        let _ = destroy(self, world, choose_random_direction());
-        sleep(Duration::from_secs_f32(TICK_DURATION/10.0));
-        let _ = put(self, world, Rock(0), 1, choose_random_direction());
     }
     fn handle_event(&mut self, event: Event) {
         //here based on the events triggered by the common crate, i trigger my private events
@@ -82,7 +66,7 @@ impl Runnable for MyRobot {
                 }
                 queue_event(ReadRobotEventType::AddBackpack(vec_content));
                 if quantity != 0 {
-                queue_event(ReadRobotEventType::MessageLogAddedToBackpack((content, quantity)));
+                    queue_event(ReadRobotEventType::MessageLogAddedToBackpack((content, quantity)));
                 }
             }
 
@@ -118,15 +102,5 @@ impl Runnable for MyRobot {
     }
     fn get_backpack_mut(&mut self) -> &mut BackPack {
         &mut self.0.backpack
-    }
-}
-
-fn choose_random_direction() -> Direction{
-    let n = rand::thread_rng().gen_range(0..4);
-    match n {
-        0 => Direction::Right,
-        1 => Direction::Left,
-        2 => Direction::Up,
-        _ => Direction::Down
     }
 }

@@ -6,10 +6,10 @@ use robotics_lib::world::environmental_conditions::{DayTime, EnvironmentalCondit
 use robotics_lib::world::tile::{Content, Tile, TileType};
 use robotics_lib::world::world_generator::Generator;
 use worldgen_unwrap::public::WorldgeneratorUnwrap;
-use crate::player_gen::{Player2d, Player3d};
-use crate::frame_gen::{BackpackFrame, EnergyTotFrame, EnergyAddFrame, EnergyRemFrame, WeatherFrame, TimeFrame, MessageFrame, MapFrame};
-use crate::world_gen::{ContentBlock, Light, TileBlock};
-use crate::{FRAME_SIZE, MAP_SIZE, SQUARE_FRAME_PATH, WORLD_PATH};
+use crate::gui::player_gen::{Player2d, Player3d};
+use crate::gui::frame_gen::{BackpackFrame, EnergyTotFrame, EnergyAddFrame, EnergyRemFrame, WeatherFrame, TimeFrame, MessageFrame, MapFrame};
+use crate::gui::world_gen::{ContentBlock, Light, TileBlock};
+use crate::gui::gui_test::{FRAME_SIZE, MAP_SIZE, SQUARE_FRAME_PATH, WORLD_PATH};
 
 pub struct ReadEventPlugin;
 

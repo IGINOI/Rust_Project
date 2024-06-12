@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_third_person_camera::*;
+//use crate::MainCamera;
 
 pub struct CameraPlugin;
 #[derive(Component)]
@@ -8,11 +9,11 @@ pub struct MainCamera;
 impl Plugin for CameraPlugin{
     fn build(&self, app: &mut App) {
         app
-            .add_systems(Startup, spawn_camera_3d);
+            .add_systems(Startup, spawn_camera_3d)
+            .add_systems(Startup, spawn_camera_ui);
     }
 }
 
-//spawn the 3d camera with the Third Person Camera component that follows the player during the simulation
 fn spawn_camera_3d(mut commands: Commands)
 {
     let camera = (
@@ -25,12 +26,23 @@ fn spawn_camera_3d(mut commands: Commands)
             zoom: Zoom::new(0.0, 200.0),
             cursor_lock_toggle_enabled: true,
             cursor_lock_active: true,
-            //With Tab you can unlock the cursor from the simulation and move it normally
             cursor_lock_key: KeyCode::Tab,
             ..default()
         },
-        MainCamera,
         Name::new("3d cameras")
     );
-    commands.spawn(camera);
+    commands.spawn(camera).insert(MainCamera);
+
+
+}
+
+fn spawn_camera_ui(mut commands: Commands)
+{
+    let ui_camera = (
+        UiCameraConfig{
+            ..default()
+        },
+        Name::new("2d camera")
+    );
+    commands.spawn(ui_camera);
 }

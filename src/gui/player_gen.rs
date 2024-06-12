@@ -3,7 +3,7 @@ use bevy_third_person_camera::*;
 use bevy::prelude::*;
 use robotics_lib::world::world_generator::Generator;
 use worldgen_unwrap::public::WorldgeneratorUnwrap;
-use crate::{MAP_SIZE, WORLD_PATH};
+use crate::gui::gui_test::{MAP_SIZE, WORLD_PATH};
 
 #[derive(Component)]
 pub struct Player3d;

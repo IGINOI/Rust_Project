@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use robotics_lib::world::tile::{Content, TileType};
 use robotics_lib::world::world_generator::Generator;
 use worldgen_unwrap::public::WorldgeneratorUnwrap;
-use crate::{WORLD_PATH};
+use crate::gui::gui_test::{WORLD_PATH};
 
 pub struct WorldPlugin;
 
@@ -128,4 +128,3 @@ fn spawn_world(
     }
 
 }
-
